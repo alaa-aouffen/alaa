@@ -46,12 +46,12 @@ return [
 
         'mysql' => [
             'driver' => 'mysql',
-            'url' => env('DATABASE_URL', env('MYSQL_URL', env('DB_URL'))),
-            'host' => env('DB_HOST', env('MYSQL_HOST', '127.0.0.1')),
-            'port' => env('DB_PORT', env('MYSQL_PORT', '3306')),
-            'database' => env('DB_DATABASE', env('MYSQL_DATABASE', 'laravel')),
-            'username' => env('DB_USERNAME', env('MYSQL_USER', 'root')),
-            'password' => env('DB_PASSWORD', env('MYSQL_PASSWORD', '')),
+            'url' => env('DATABASE_URL') ?: env('MYSQL_URL') ?: env('DB_URL') ?: null,
+            'host' => env('DB_HOST') ?: env('MYSQL_HOST') ?: env('MYSQLHOST') ?: '127.0.0.1',
+            'port' => env('DB_PORT') ?: env('MYSQL_PORT') ?: env('MYSQLPORT') ?: '3306',
+            'database' => env('DB_DATABASE') ?: env('MYSQL_DATABASE') ?: env('MYSQLDATABASE') ?: 'laravel',
+            'username' => env('DB_USERNAME') ?: env('MYSQL_USER') ?: env('MYSQLUSER') ?: 'root',
+            'password' => env('DB_PASSWORD') ?: env('MYSQL_PASSWORD') ?: env('MYSQLPASSWORD') ?: '',
             'unix_socket' => env('DB_SOCKET', ''),
             'charset' => env('DB_CHARSET', 'utf8mb4'),
             'collation' => env('DB_COLLATION', 'utf8mb4_unicode_ci'),
