@@ -2,10 +2,9 @@ providers = ["php"]
 
 [variables]
     PHP_VERSION = "8.2"
-    NIXPACKS_NODE_VERSION = ""
 
 [phases.install]
     cmds = ["composer install --no-dev --optimize-autoloader"]
 
 [start]
-    cmd = "php artisan config:clear && php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=$PORT"
+    cmd = "php artisan config:clear; php artisan migrate --force; php artisan serve --host=0.0.0.0 --port=$PORT"
