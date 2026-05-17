@@ -11,6 +11,9 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        // ── 0. Delivery Fees (58 wilayas) ────────────────────────────
+        $this->call(DeliveryFeeSeeder::class);
+
         // ── 1. Create Admin ──────────────────────────────────────────
         $admin = User::firstOrCreate(
             ['email' => 'admin@callcenter.dz'],
