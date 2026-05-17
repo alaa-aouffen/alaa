@@ -21,6 +21,34 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
 
+    // ─── Health check (no DB required) ───────────────────────────────
+    Route::get('health', function () {
+        return response()->json(['status' => 'ok', 'timestamp' => now()]);
+    });
+
+    // ─── DB debug (temporary) ─────────────────────────────────────────
+    Route::get('db-debug', function () {
+        try {
+            \DB::connection()->getPdo();
+            $tables = \DB::select('SHOW TABLES');
+            return response()->json([
+                'status' => 'connected',
+                'host' => env('DB_HOST') ?: env('MYSQLHOST') ?: 'N/A',
+                'database' => env('DB_DATABASE') ?: env('MYSQLDATABASE') ?: 'N/A',
+                'tables_count' => count($tables),
+                'DATABASE_URL_set' => !empty(env('DATABASE_URL')),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+                'host' => env('DB_HOST') ?: env('MYSQLHOST') ?: 'N/A',
+                'database' => env('DB_DATABASE') ?: env('MYSQLDATABASE') ?: 'N/A',
+                'DATABASE_URL_set' => !empty(env('DATABASE_URL')),
+            ], 500);
+        }
+    });
+
     // ─── Public routes ───────────────────────────────────────────────
     Route::post('auth/login', [AuthController::class, 'login'])->name('login');
 
