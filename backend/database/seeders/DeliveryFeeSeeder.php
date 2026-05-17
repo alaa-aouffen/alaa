@@ -74,7 +74,9 @@ class DeliveryFeeSeeder extends Seeder
         ];
 
         // Clear existing to avoid duplicates if names change
+        \DB::statement('SET FOREIGN_KEY_CHECKS=0');
         DeliveryFee::truncate();
+        \DB::statement('SET FOREIGN_KEY_CHECKS=1');
 
         foreach ($fees as $code => $data) {
             DeliveryFee::create([
