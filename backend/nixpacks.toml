@@ -2,6 +2,7 @@ providers = ["php"]
 
 [variables]
     PHP_VERSION = "8.2"
+    NIXPACKS_NODE_VERSION = ""
 
 [phases.install]
     cmds = ["composer install --no-dev --optimize-autoloader"]
