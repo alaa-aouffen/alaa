@@ -30,12 +30,30 @@ const StatCard = ({ title, value, icon: Icon, color, subtitle }) => (
   </Card>
 );
 
+const statusTranslations = {
+  new: 'Nouveau',
+  assigned: 'Assigné',
+  in_progress: 'En cours',
+  confirmed: 'Confirmé',
+  shipped: 'Expédié',
+  delivered: 'Livré',
+  returned: 'Retourné',
+  cancelled: 'Annulé',
+  postponed: 'Reporté',
+  not_reachable: 'Injoignable',
+  wrong_number: 'Faux N°'
+};
+
 const Dashboard = () => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
   const [agentsProductsDate, setAgentsProductsDate] = useState('');
   const [wilayaStart, setWilayaStart] = useState('');
   const [wilayaEnd, setWilayaEnd] = useState('');
+  const [statusStart, setStatusStart] = useState(todayStr);
+  const [statusEnd, setStatusEnd] = useState(todayStr);
   const { isAdmin } = useAuth();
   const navigate = useNavigate();
 
@@ -48,6 +66,8 @@ const Dashboard = () => {
             date: agentsProductsDate || undefined,
             wilaya_start: wilayaStart || undefined,
             wilaya_end: wilayaEnd || undefined,
+            status_start: statusStart || undefined,
+            status_end: statusEnd || undefined,
           }
         });
         setStats(res.data);
@@ -58,7 +78,7 @@ const Dashboard = () => {
       }
     };
     fetchStats();
-  }, [agentsProductsDate, wilayaStart, wilayaEnd]);
+  }, [agentsProductsDate, wilayaStart, wilayaEnd, statusStart, statusEnd]);
 
   if (loading && !stats) return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-pulse">
@@ -104,6 +124,8 @@ const Dashboard = () => {
             color="bg-indigo-500" 
           />
         </div>
+
+
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Top Wilayas */}
@@ -273,64 +295,62 @@ const Dashboard = () => {
           </Card>
         </div>
 
-        {/* Global Pending Orders for Admin */}
+        {/* Order Status Breakdown */}
         <Card>
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
             <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-              <Clock className="text-primary-600" size={20} />
-              Commandes en attente (Global)
+              <TrendingUp className="text-primary-600" size={20} />
+              Répartition par Statut
             </h2>
-            <Badge variant="warning">{stats.pending_list?.length} à traiter</Badge>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100">
+                <span className="text-[10px] font-bold text-slate-400 uppercase">Du</span>
+                <input 
+                  type="date" 
+                  value={statusStart} 
+                  onChange={(e) => setStatusStart(e.target.value)} 
+                  className="text-xs bg-transparent font-medium outline-none cursor-pointer text-slate-700"
+                />
+                <span className="text-slate-300">|</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase">Au</span>
+                <input 
+                  type="date" 
+                  value={statusEnd} 
+                  onChange={(e) => setStatusEnd(e.target.value)} 
+                  className="text-xs bg-transparent font-medium outline-none cursor-pointer text-slate-700"
+                />
+              </div>
+            </div>
           </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="text-left border-b border-slate-100">
-                  <th className="pb-4 font-semibold text-slate-600">Client</th>
-                  <th className="pb-4 font-semibold text-slate-600">Wilaya</th>
-                  <th className="pb-4 font-semibold text-slate-600">Tentatives</th>
-                  <th className="pb-4 font-semibold text-slate-600">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {stats.pending_list?.map((order) => (
-                  <tr key={order.id} className="group hover:bg-slate-50 transition-colors">
-                    <td className="py-4">
-                      <p className="font-bold text-slate-900">{order.customer_name}</p>
-                      <div className="flex items-center gap-2">
-                        <p className="text-[10px] text-slate-500 font-bold">{order.customer_phone}</p>
-                        <span className="text-slate-200">|</span>
-                        <p className="text-[10px] text-primary-600 font-black">
-                          {new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </p>
-                      </div>
-                    </td>
-                    <td className="py-4 text-sm text-slate-600">{order.wilaya}</td>
-                    <td className="py-4 text-sm">
-                      <span className="px-2 py-1 bg-slate-100 rounded-full font-medium">
-                        {order.call_attempts}
-                      </span>
-                    </td>
-                    <td className="py-4">
-                      <a 
-                        href={`/orders/${order.id}`}
-                        className="text-primary-600 font-bold text-sm hover:underline"
-                      >
-                        Détails
-                      </a>
-                    </td>
-                  </tr>
-                ))}
-                {stats.pending_list?.length === 0 && (
-                  <tr>
-                    <td colSpan="4" className="py-8 text-center text-slate-400">
-                      Aucune commande en attente.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            {Object.entries(stats.by_status || {}).map(([key, count]) => {
+              const colors = {
+                new: 'text-blue-600 bg-blue-50 border-blue-200',
+                confirmed: 'text-emerald-600 bg-emerald-50 border-emerald-200',
+                cancelled: 'text-red-600 bg-red-50 border-red-200',
+                postponed: 'text-orange-600 bg-orange-50 border-orange-200',
+                assigned: 'text-indigo-600 bg-indigo-50 border-indigo-200',
+                in_progress: 'text-amber-600 bg-amber-50 border-amber-200',
+                delivered: 'text-green-600 bg-green-50 border-green-200',
+                returned: 'text-rose-600 bg-rose-50 border-rose-200',
+                shipped: 'text-purple-600 bg-purple-50 border-purple-200',
+                not_reachable: 'text-slate-600 bg-slate-50 border-slate-200',
+              };
+              const color = colors[key] || 'text-slate-600 bg-slate-50 border-slate-200';
+              return (
+                <div
+                  key={key}
+                  onClick={() => navigate(`/orders?status=${key}&count=${count ?? 0}&start_date=${statusStart}&end_date=${statusEnd}`)}
+                  className={`${color} border rounded-2xl p-4 flex flex-col gap-3 group hover:shadow-md transition-all cursor-pointer hover:-translate-y-1`}
+                >
+                  <p className="text-[10px] font-black uppercase tracking-wider">{statusTranslations[key] || key.replace('_', ' ')}</p>
+                  <div className="flex items-end justify-between">
+                    <span className="text-2xl font-black">{count}</span>
+                    <span className="text-[10px] font-bold opacity-70 mb-1">cmd</span>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </Card>
       </div>

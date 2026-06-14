@@ -16,8 +16,8 @@ class ZrExpressAccount extends Model
         'is_active',
     ];
 
-    public function users()
+    public function categories()
     {
-        return $this->hasMany(User::class, 'zr_express_account_id');
+        return $this->hasMany(Category::class, 'zr_express_account_id');
     }
 }

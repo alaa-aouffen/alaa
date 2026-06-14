@@ -28,18 +28,21 @@ class ZRExpressWebhookController extends Controller
         // For now, we log the attempts. In production, we'll enforce strict HMAC verification.
         
         $payload = $request->all();
-        $eventType = $payload['eventType'] ?? null;
-        $data = $payload['data'] ?? [];
+        $eventType = $payload['eventType'] ?? $payload['EventType'] ?? null;
+        $data = $payload['data'] ?? $payload['Data'] ?? [];
 
         Log::info('ZR Express Webhook Received', [
             'type' => $eventType,
-            'trackingNumber' => $data['trackingNumber'] ?? 'N/A'
+            'trackingNumber' => $data['trackingNumber'] ?? $data['TrackingNumber'] ?? 'N/A'
         ]);
 
         // Process only parcel state updates
-        if ($eventType === 'parcel.state.updated' && !empty($data['trackingNumber'])) {
-            $trackingNumber = $data['trackingNumber'];
-            $newState = $data['currentState']['stateName'] ?? $data['stateName'] ?? 'Inconnu';
+        $trackingNumber = $data['trackingNumber'] ?? $data['TrackingNumber'] ?? null;
+        if ($eventType === 'parcel.state.updated' && !empty($trackingNumber)) {
+            $newState = $data['State']['Description'] ?? $data['State']['Name'] 
+                        ?? $data['currentState']['stateName'] 
+                        ?? $data['stateName'] 
+                        ?? 'Inconnu';
 
             // Find the order by tracking number
             $order = Order::where('tracking_number', $trackingNumber)->first();

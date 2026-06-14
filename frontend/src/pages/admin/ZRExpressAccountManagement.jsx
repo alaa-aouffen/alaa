@@ -77,7 +77,7 @@ const ZRExpressAccountManagement = () => {
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Sous-comptes ZR Express</h1>
           <p className="text-sm text-slate-500 mt-1">
-            Gérez vos différents comptes ZR Express. Vous pourrez ensuite lier chaque agent à l'un de ces comptes.
+            Gérez vos différents comptes ZR Express. Vous pourrez ensuite lier chaque catégorie (produit) à l'un de ces comptes.
           </p>
         </div>
         <button
@@ -190,7 +190,7 @@ const ZRExpressAccountManagement = () => {
                 <tr className="bg-slate-50 text-slate-500 text-sm border-b border-slate-200">
                   <th className="px-6 py-3 font-medium">Nom du compte</th>
                   <th className="px-6 py-3 font-medium">Tenant ID</th>
-                  <th className="px-6 py-3 font-medium">Agents liés</th>
+                  <th className="px-6 py-3 font-medium">Produits liés</th>
                   <th className="px-6 py-3 font-medium">Statut</th>
                   <th className="px-6 py-3 font-medium text-right">Actions</th>
                 </tr>
@@ -207,7 +207,7 @@ const ZRExpressAccountManagement = () => {
                       <code className="text-xs bg-slate-100 px-1.5 py-0.5 rounded text-slate-600">{account.tenant_id}</code>
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-600">
-                      {account.users_count || 0} agents
+                      {account.categories_count || 0} produits
                     </td>
                     <td className="px-6 py-4">
                         {account.is_active ? (

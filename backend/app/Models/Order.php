@@ -30,6 +30,7 @@ class Order extends Model
         'shipping_status',
         'delivery_type',
         'stopdesk_id',
+        'postponed_date',
     ];
 
     protected $casts = [
@@ -38,6 +39,7 @@ class Order extends Model
         'quantity' => 'integer',
         'call_attempts' => 'integer',
         'category_id' => 'integer',
+        'postponed_date' => 'date',
     ];
 
     // Relationships

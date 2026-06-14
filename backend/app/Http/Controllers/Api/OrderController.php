@@ -25,6 +25,13 @@ class OrderController extends Controller
         if ($user->isAgent()) {
             $query->where('assigned_to', $user->id);
             
+            // Filter postponed orders: only show if postponed_date is today or in the past
+            $query->where(function ($q) {
+                $q->where('status', '!=', 'postponed')
+                  ->orWhereNull('postponed_date')
+                  ->orWhere('postponed_date', '<=', now()->toDateString());
+            });
+            
             // Apply delay filter
             $delay = (int) \App\Models\Setting::get('order_processing_delay_days', 0);
             if ($delay > 0) {
@@ -49,6 +56,12 @@ class OrderController extends Controller
         }
         if ($request->filled('product_name')) {
             $query->where('product_name', $request->product_name);
+        }
+        if ($request->filled('start_date')) {
+            $query->where('created_at', '>=', \Carbon\Carbon::parse($request->start_date)->startOfDay());
+        }
+        if ($request->filled('end_date')) {
+            $query->where('created_at', '<=', \Carbon\Carbon::parse($request->end_date)->endOfDay());
         }
 
         $orders = $query->paginate($request->get('per_page', 20));
@@ -149,13 +162,22 @@ class OrderController extends Controller
             return response()->json(['message' => 'Le numéro de téléphone et la destination (Wilaya/Adresse) sont obligatoires pour l\'expédition.'], 422);
         }
 
-        // Save delivery_type and stopdesk_id if provided in request, otherwise keep existing
+        // Save delivery_type, stopdesk_id, and final_price if provided in request
         $deliveryType = request()->input('delivery_type', $order->delivery_type ?? 'home');
+        $updates = [];
+
         if (in_array($deliveryType, ['home', 'pickup-point'])) {
-            $updates = ['delivery_type' => $deliveryType];
+            $updates['delivery_type'] = $deliveryType;
             if ($deliveryType === 'pickup-point' && request()->has('stopdesk_id')) {
                 $updates['stopdesk_id'] = request()->input('stopdesk_id');
             }
+        }
+
+        if (request()->has('final_price') && request()->input('final_price') !== null) {
+            $updates['total_price'] = request()->input('final_price');
+        }
+
+        if (!empty($updates)) {
             $order->update($updates);
         }
 
@@ -234,7 +256,7 @@ class OrderController extends Controller
         }
 
         $history = $zrService->getHistory($order->tracking_number, $order);
-        return response()->json($history);
+        return response()->json(['history' => $history]);
     }
 
     /**

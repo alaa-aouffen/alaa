@@ -26,23 +26,23 @@ class ZRExpressService
      */
     protected function setAccountFromOrder($order)
     {
-        // 1. Get the agent assigned to the order
-        $agent = $order->agent ?? null;
+        // 1. Get the category assigned to the order
+        $category = $order->category ?? null;
 
-        if ($agent) {
-            \Log::info("ZRExpress: Switching account for Order #{$order->id} (Agent: {$agent->name}, ID: {$agent->id})");
+        if ($category) {
+            \Log::info("ZRExpress: Switching account for Order #{$order->id} (Category: {$category->name}, ID: {$category->id})");
             
-            if ($agent->zrExpressAccount) {
-                \Log::info("ZRExpress: Using sub-account: " . $agent->zrExpressAccount->name);
-                $this->token = $agent->zrExpressAccount->token;
-                $this->tenantId = $agent->zrExpressAccount->tenant_id;
+            if ($category->zrExpressAccount) {
+                \Log::info("ZRExpress: Using sub-account: " . $category->zrExpressAccount->name);
+                $this->token = $category->zrExpressAccount->token;
+                $this->tenantId = $category->zrExpressAccount->tenant_id;
             } else {
-                \Log::info("ZRExpress: Agent has no sub-account, using default config.");
+                \Log::info("ZRExpress: Category has no sub-account, using default config.");
                 $this->token = config('zrexpress.token');
                 $this->tenantId = config('zrexpress.tenant_id');
             }
         } else {
-            \Log::info("ZRExpress: Order #{$order->id} has no agent assigned, using default config.");
+            \Log::info("ZRExpress: Order #{$order->id} has no category assigned, using default config.");
             $this->token = config('zrexpress.token');
             $this->tenantId = config('zrexpress.tenant_id');
         }
@@ -136,6 +136,7 @@ class ZRExpressService
                     $hubsRes = Http::withoutVerifying()
                         ->withHeaders($this->headers())
                         ->post("{$this->baseUrl}/api/v1/hubs/search", [
+                            'territoryId' => $territories['cityId'],
                             'page' => 1,
                             'pageSize' => 100
                         ]);
@@ -216,30 +217,24 @@ class ZRExpressService
     /**
      * Look up territory IDs (Wilaya/City and Commune/District)
      */
+    /**
+     * Normalize a wilaya/commune name using the comprehensive WilayaHelper mapping.
+     * Handles Arabic, French with/without accents, Ayor typos, and "XX - Name - عربي" formats.
+     */
     protected function cleanName($name)
     {
         if (empty($name)) return '';
-        
-        // Remove common accents
-        $name = str_replace(
-            ['ï', 'î', 'é', 'è', 'ê', 'ë', 'à', 'â', 'ä', 'ô', 'ö', 'ù', 'û', 'ü', 'ç'],
-            ['i', 'i', 'e', 'e', 'e', 'e', 'a', 'a', 'a', 'o', 'o', 'u', 'u', 'u', 'c'],
-            $name
-        );
 
-        // If format is "10 - Bouira - البويرة", extract "Bouira"
+        // Extract French name from Ayor format: "11 - Tamanrasset - تمنراست"
         if (str_contains($name, ' - ')) {
             $parts = explode(' - ', $name);
-            // If the first part is a number (ID), take the second part (Name)
             if (is_numeric(trim($parts[0])) && isset($parts[1])) {
-                $name = $parts[1];
-            } else {
-                // Otherwise take the first part
-                $name = $parts[0];
+                $name = trim($parts[1]);
             }
         }
-        
-        return trim($name);
+
+        // Delegate to the comprehensive 58-wilaya mapping
+        return \App\Helpers\WilayaHelper::normalize($name);
     }
 
     protected function lookupTerritories($wilayaName, $communeName)
@@ -486,6 +481,7 @@ class ZRExpressService
         $hubsRes = Http::withoutVerifying()
             ->withHeaders($this->headers())
             ->post("{$this->baseUrl}/api/v1/hubs/search", [
+                'territoryId' => $territories['cityId'],
                 'page' => 1,
                 'pageSize' => 100
             ]);

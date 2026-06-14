@@ -22,11 +22,15 @@ return [
     'allowed_origins' => [
         'http://localhost:5173',
         'http://localhost:3000',
+        'http://localhost',
         'https://ecom-pro-one.vercel.app',
         'https://*.vercel.app',
     ],
 
-    'allowed_origins_patterns' => ['#^https://.*\.vercel\.app$#'],
+    'allowed_origins_patterns' => [
+        '#^https://.*\\.vercel\\.app$#',
+        '#^http://localhost(:[0-9]+)?$#',  // Autorise tous les ports localhost (Flutter web)
+    ],
 
     'allowed_headers' => ['*'],
 

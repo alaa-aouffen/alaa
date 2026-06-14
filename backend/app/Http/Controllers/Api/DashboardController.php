@@ -31,27 +31,34 @@ class DashboardController extends Controller
         $wilayaStartDate = $request->input('wilaya_start') ? \Carbon\Carbon::parse($request->input('wilaya_start'))->startOfDay() : \Carbon\Carbon::now()->subDays(7)->startOfDay();
         $wilayaEndDate = $request->input('wilaya_end') ? \Carbon\Carbon::parse($request->input('wilaya_end'))->endOfDay() : \Carbon\Carbon::now()->endOfDay();
 
+        // Status breakdown filter — default to today
+        $statusStartDate = $request->input('status_start') ? \Carbon\Carbon::parse($request->input('status_start'))->startOfDay() : \Carbon\Carbon::today()->startOfDay();
+        $statusEndDate   = $request->input('status_end')   ? \Carbon\Carbon::parse($request->input('status_end'))->endOfDay()   : \Carbon\Carbon::today()->endOfDay();
+
         $totalOrders   = Order::count();
-        $newOrders     = Order::where('status', 'new')->count();
-        $confirmedOrders = Order::where('status', 'confirmed')->count();
-        $cancelledOrders = Order::where('status', 'cancelled')->count();
-        $deliveredOrders = Order::where('status', 'delivered')->count();
         $totalAgents   = User::where('role', 'agent')->where('is_active', true)->count();
         $totalCalls    = CallLog::count();
         
-        // Stats for selected date
+        // Stats for selected date (agents/products panel)
         $ordersToday = Order::whereDate('created_at', $dateFilter)->count();
         $confirmedToday = Order::where('status', 'confirmed')->whereDate('updated_at', $dateFilter)->count();
         $callsToday = CallLog::whereDate('called_at', $dateFilter)->count();
 
-        $confirmationRate = $totalOrders > 0
-            ? round(($confirmedOrders / $totalOrders) * 100, 1)
-            : 0;
-
-        // Orders by status breakdown
+        // Orders by status breakdown — filtered by status date range
         $byStatus = Order::select('status', DB::raw('count(*) as count'))
+            ->whereBetween('created_at', [$statusStartDate, $statusEndDate])
             ->groupBy('status')
             ->pluck('count', 'status');
+
+        $statusTotal    = $byStatus->sum();
+        $newOrders      = $byStatus->get('new', 0);
+        $confirmedOrders = $byStatus->get('confirmed', 0);
+        $cancelledOrders = $byStatus->get('cancelled', 0);
+        $deliveredOrders = $byStatus->get('delivered', 0);
+
+        $confirmationRate = $statusTotal > 0
+            ? round(($confirmedOrders / $statusTotal) * 100, 1)
+            : 0;
 
         // Orders by wilaya (top 10) with confirmation counts within selected period
         $byWilaya = Order::select('wilaya', 
@@ -84,12 +91,20 @@ class DashboardController extends Controller
             ->limit(5)
             ->get(['id', 'name', 'email']);
 
-        // Orders by product for selected date
-        $byProductToday = Order::whereDate('created_at', $dateFilter)
-            ->select('product_name', DB::raw('count(*) as count'))
-            ->groupBy('product_name')
-            ->orderBy('count', 'desc')
-            ->get();
+        // Orders by product for selected date (grouping variations like (x2))
+        $ordersTodayForProducts = Order::whereDate('created_at', $dateFilter)
+            ->get(['product_name']);
+            
+        $byProductToday = $ordersTodayForProducts->groupBy(function($order) {
+            // Remove (x2), (x3) etc., " - Copy 1", and trailing/leading spaces
+            $cleanName = preg_replace('/(?:\s*\(x\d+\))|(?:\s*-\s*Copy\s*\d*)/i', '', $order->product_name);
+            return trim($cleanName);
+        })->map(function($group, $name) {
+            return [
+                'product_name' => $name,
+                'count' => $group->count()
+            ];
+        })->sortByDesc('count')->values();
 
         return response()->json([
             'total_orders'      => $totalOrders,
@@ -97,6 +112,7 @@ class DashboardController extends Controller
             'confirmed_orders'  => $confirmedOrders,
             'cancelled_orders'  => $cancelledOrders,
             'delivered_orders'  => $deliveredOrders,
+            'status_total'      => $statusTotal,
             'total_agents'      => $totalAgents,
             'total_calls'       => $totalCalls,
             'confirmation_rate' => $confirmationRate,

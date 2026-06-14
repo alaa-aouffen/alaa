@@ -39,6 +39,7 @@ export const Badge = ({ children, status = 'default' }) => {
     returned: 'bg-gray-100 text-gray-700',
     shipped: 'bg-purple-100 text-purple-700',
     not_reachable: 'bg-slate-100 text-slate-600',
+    wrong_number: 'bg-red-100 text-red-700',
     default: 'bg-slate-100 text-slate-600',
   };
 
@@ -52,7 +53,8 @@ export const Badge = ({ children, status = 'default' }) => {
     delivered: 'Livré',
     returned: 'Retourné',
     shipped: 'Expédié',
-    not_reachable: 'Injoignable'
+    not_reachable: 'Injoignable',
+    wrong_number: 'Faux N°'
   };
 
   return (

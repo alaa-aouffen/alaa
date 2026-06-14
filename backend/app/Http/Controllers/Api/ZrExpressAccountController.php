@@ -14,7 +14,7 @@ class ZrExpressAccountController extends Controller
      */
     public function index()
     {
-        $accounts = ZrExpressAccount::withCount('users')->get();
+        $accounts = ZrExpressAccount::withCount('categories')->get();
         return response()->json($accounts);
     }
 
@@ -73,8 +73,8 @@ class ZrExpressAccountController extends Controller
      */
     public function destroy(ZrExpressAccount $zrExpressAccount)
     {
-        if ($zrExpressAccount->users()->exists()) {
-            return response()->json(['message' => 'Impossible de supprimer un compte lié à des agents.'], 422);
+        if ($zrExpressAccount->categories()->exists()) {
+            return response()->json(['message' => 'Impossible de supprimer un compte ayant des produits assignés.'], 400);
         }
         
         $zrExpressAccount->delete();

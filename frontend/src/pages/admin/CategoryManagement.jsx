@@ -5,13 +5,15 @@ import { Plus, Edit2, Trash2, Tag, Save, X, Settings } from 'lucide-react';
 const CategoryManagement = () => {
   const [categories, setCategories] = useState([]);
   const [agents, setAgents] = useState([]);
+  const [zrAccounts, setZrAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   
   const [formData, setFormData] = useState({
     name: '',
     keywords: '',
-    user_id: ''
+    user_id: '',
+    zr_express_account_id: ''
   });
   const [editingId, setEditingId] = useState(null);
 
@@ -22,13 +24,15 @@ const CategoryManagement = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [catRes, agRes] = await Promise.all([
+      const [catRes, agRes, zrRes] = await Promise.all([
         api.get('/categories'),
-        api.get('/agents')
+        api.get('/agents'),
+        api.get('/zr-express-accounts')
       ]);
       setCategories(catRes.data);
       // Depending on API structure, agents might be in data.data or just data
       setAgents(agRes.data.data || agRes.data);
+      setZrAccounts(zrRes.data);
     } catch (err) {
       console.error('Failed to fetch data', err);
     } finally {
@@ -41,6 +45,7 @@ const CategoryManagement = () => {
     try {
       const payload = { ...formData };
       if (!payload.user_id) payload.user_id = null;
+      if (!payload.zr_express_account_id) payload.zr_express_account_id = null;
 
       if (editingId) {
         await api.put(`/categories/${editingId}`, payload);
@@ -49,7 +54,7 @@ const CategoryManagement = () => {
       }
       setShowForm(false);
       setEditingId(null);
-      setFormData({ name: '', keywords: '', user_id: '' });
+      setFormData({ name: '', keywords: '', user_id: '', zr_express_account_id: '' });
       fetchData();
     } catch (err) {
       console.error('Action failed', err);
@@ -61,7 +66,8 @@ const CategoryManagement = () => {
     setFormData({
       name: cat.name,
       keywords: cat.keywords || '',
-      user_id: cat.user_id || ''
+      user_id: cat.user_id || '',
+      zr_express_account_id: cat.zr_express_account_id || ''
     });
     setEditingId(cat.id);
     setShowForm(true);
@@ -90,7 +96,7 @@ const CategoryManagement = () => {
         <button
           onClick={() => {
             setEditingId(null);
-            setFormData({ name: '', keywords: '', user_id: '' });
+            setFormData({ name: '', keywords: '', user_id: '', zr_express_account_id: '' });
             setShowForm(true);
           }}
           className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition"
@@ -136,6 +142,20 @@ const CategoryManagement = () => {
                   <option value="">-- Aucun Agent (Automatique vers Admin) --</option>
                   {agents.map(agent => (
                     <option key={agent.id} value={agent.id}>{agent.name} (Agent)</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Compte ZR Express</label>
+                <select
+                  value={formData.zr_express_account_id}
+                  onChange={(e) => setFormData({ ...formData, zr_express_account_id: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none bg-white"
+                >
+                  <option value="">-- Compte par défaut --</option>
+                  {zrAccounts.map(account => (
+                    <option key={account.id} value={account.id}>{account.name}</option>
                   ))}
                 </select>
               </div>
@@ -191,6 +211,7 @@ const CategoryManagement = () => {
                   <th className="px-6 py-3 font-medium">Nom</th>
                   <th className="px-6 py-3 font-medium">Mots-Clés</th>
                   <th className="px-6 py-3 font-medium">Agent</th>
+                  <th className="px-6 py-3 font-medium">Compte ZR</th>
                   <th className="px-6 py-3 font-medium text-right">Actions</th>
                 </tr>
               </thead>
@@ -219,6 +240,16 @@ const CategoryManagement = () => {
                         </div>
                       ) : (
                         <span className="text-slate-400 italic text-sm">-- Admin --</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      {cat.zr_express_account ? (
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
+                          <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                          {cat.zr_express_account.name}
+                        </div>
+                      ) : (
+                        <span className="text-slate-400 italic text-sm">-- Défaut --</span>
                       )}
                     </td>
                     <td className="px-6 py-4 text-right">

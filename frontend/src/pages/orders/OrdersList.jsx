@@ -29,6 +29,9 @@ const OrdersList = () => {
   const [status, setStatus] = useState('');
   const [wilaya, setWilaya] = useState('');
   const [productName, setProductName] = useState('');
+  const [dashboardCount, setDashboardCount] = useState(null);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [newOrder, setNewOrder] = useState({
@@ -46,6 +49,20 @@ const OrdersList = () => {
     // Sync URL params to state
     const p = searchParams.get('product');
     if (p) setProductName(p);
+    const s = searchParams.get('status');
+    if (s) setStatus(s);
+    const c = searchParams.get('count');
+    if (c !== null) {
+      setDashboardCount(parseInt(c, 10));
+    } else {
+      setDashboardCount(null);
+    }
+    const start = searchParams.get('start_date');
+    if (start) setStartDate(start);
+    else setStartDate('');
+    const end = searchParams.get('end_date');
+    if (end) setEndDate(end);
+    else setEndDate('');
   }, [searchParams]);
 
   const handleAddOrder = async (e) => {
@@ -76,6 +93,8 @@ const OrdersList = () => {
           status,
           wilaya,
           product_name: productName,
+          start_date: startDate || undefined,
+          end_date: endDate || undefined,
           per_page: 15
         }
       });
@@ -94,7 +113,7 @@ const OrdersList = () => {
     }, 500);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [page, search, status, wilaya, productName]);
+  }, [page, search, status, wilaya, productName, startDate, endDate]);
 
   const handleDelete = async (id) => {
     if (window.confirm('Voulez-vous vraiment supprimer cette commande ?')) {
@@ -199,7 +218,21 @@ const OrdersList = () => {
             </div>
             <select
               value={status}
-              onChange={(e) => { setStatus(e.target.value); setPage(1); }}
+              onChange={(e) => {
+                setStatus(e.target.value);
+                setPage(1);
+                setSearchParams(prev => {
+                  if (e.target.value) {
+                    prev.set('status', e.target.value);
+                  } else {
+                    prev.delete('status');
+                  }
+                  prev.delete('count');
+                  prev.delete('start_date');
+                  prev.delete('end_date');
+                  return prev;
+                });
+              }}
               className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all text-slate-800 appearance-none"
             >
               <option value="">Tous les statuts</option>
@@ -224,7 +257,7 @@ const OrdersList = () => {
           </div>
 
           <div className="flex items-end">
-            <Button variant="secondary" className="w-full" onClick={() => { setSearch(''); setStatus(''); setWilaya(''); setPage(1); }}>
+            <Button variant="secondary" className="w-full" onClick={() => { setSearch(''); setStatus(''); setWilaya(''); setPage(1); setSearchParams({}); }}>
               Réinitialiser
             </Button>
           </div>
@@ -248,6 +281,69 @@ const OrdersList = () => {
           </Badge>
         </div>
       )}
+
+      {/* Active Status Filter Banner */}
+      {status && (() => {
+        const statusMeta = {
+          new:          { label: 'Nouvelles',    bg: 'bg-blue-50',    border: 'border-blue-200',    text: 'text-blue-800',    badge: 'bg-blue-100 text-blue-700 border-blue-200' },
+          assigned:     { label: 'Assignées',    bg: 'bg-sky-50',     border: 'border-sky-200',     text: 'text-sky-800',     badge: 'bg-sky-100 text-sky-700 border-sky-200' },
+          in_progress:  { label: 'En cours',     bg: 'bg-violet-50',  border: 'border-violet-200',  text: 'text-violet-800',  badge: 'bg-violet-100 text-violet-700 border-violet-200' },
+          confirmed:    { label: 'Confirmées',   bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-800', badge: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
+          shipped:      { label: 'Expédiées',    bg: 'bg-indigo-50',  border: 'border-indigo-200',  text: 'text-indigo-800',  badge: 'bg-indigo-100 text-indigo-700 border-indigo-200' },
+          delivered:    { label: 'Livrées',      bg: 'bg-teal-50',    border: 'border-teal-200',    text: 'text-teal-800',    badge: 'bg-teal-100 text-teal-700 border-teal-200' },
+          cancelled:    { label: 'Annulées',     bg: 'bg-red-50',     border: 'border-red-200',     text: 'text-red-800',     badge: 'bg-red-100 text-red-700 border-red-200' },
+          postponed:    { label: 'Reportées',    bg: 'bg-amber-50',   border: 'border-amber-200',   text: 'text-amber-800',   badge: 'bg-amber-100 text-amber-700 border-amber-200' },
+          not_reachable:{ label: 'Injoignables', bg: 'bg-orange-50',  border: 'border-orange-200',  text: 'text-orange-800',  badge: 'bg-orange-100 text-orange-700 border-orange-200' },
+          returned:     { label: 'Retournées',   bg: 'bg-rose-50',    border: 'border-rose-200',    text: 'text-rose-800',    badge: 'bg-rose-100 text-rose-700 border-rose-200' },
+          wrong_number: { label: 'Faux N°',      bg: 'bg-red-50',     border: 'border-red-200',     text: 'text-red-800',     badge: 'bg-red-100 text-red-700 border-red-200' },
+        };
+        const sm = statusMeta[status] || { label: status, bg: 'bg-slate-50', border: 'border-slate-200', text: 'text-slate-800', badge: 'bg-slate-100 text-slate-700 border-slate-200' };
+        return (
+          <div className={`flex items-center justify-between gap-3 px-4 py-3 ${sm.bg} border ${sm.border} rounded-xl`}>
+            <div className="flex items-center gap-3">
+              <Filter size={16} className={sm.text} />
+              <span className={`text-sm font-bold ${sm.text}`}>Statut :</span>
+              <span className={`text-sm font-extrabold px-3 py-1 rounded-full border ${sm.badge}`}>
+                {sm.label}
+              </span>
+            </div>
+            <div className="flex items-center gap-3">
+              {dashboardCount !== null ? (
+                <span className={`text-xl font-black ${sm.text}`}>
+                  {dashboardCount}
+                  <span className="text-xs font-semibold ml-1 opacity-60">commande{dashboardCount !== 1 ? 's' : ''}</span>
+                </span>
+              ) : (
+                !loading && meta?.total !== undefined && (
+                  <span className={`text-xl font-black ${sm.text}`}>
+                    {meta.total}
+                    <span className="text-xs font-semibold ml-1 opacity-60">commande{meta.total !== 1 ? 's' : ''}</span>
+                  </span>
+                )
+              )}
+              <button
+                onClick={() => {
+                  setStatus('');
+                  setStartDate('');
+                  setEndDate('');
+                  setPage(1);
+                  setSearchParams(prev => {
+                    prev.delete('status');
+                    prev.delete('count');
+                    prev.delete('start_date');
+                    prev.delete('end_date');
+                    return prev;
+                  });
+                }}
+                className={`p-1.5 rounded-lg hover:bg-white/60 transition-colors ${sm.text}`}
+                title="Effacer le filtre"
+              >
+                <X size={16} />
+              </button>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Orders Table */}
       <Card noPadding>
@@ -339,7 +435,20 @@ const OrdersList = () => {
                       </div>
                     </td>
                     <td className="py-4 px-6">
-                      <Badge status={order.status}>{order.status}</Badge>
+                      <div className="flex flex-col items-start gap-1">
+                        <Badge status={order.status}>{order.status}</Badge>
+                        {order.status === 'postponed' && order.postponed_date && (
+                          <span className={`text-[10px] font-black ${
+                            new Date(order.postponed_date).toDateString() === new Date().toDateString() 
+                              ? 'text-orange-600 animate-pulse' 
+                              : 'text-slate-400'
+                          }`}>
+                            {new Date(order.postponed_date).toDateString() === new Date().toDateString() 
+                              ? 'À traiter aujourd\'hui' 
+                              : `Le ${new Date(order.postponed_date).toLocaleDateString()}`}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="py-4 px-6">
                       <div className="flex justify-end gap-2">
@@ -475,6 +584,8 @@ const OrdersList = () => {
                       required 
                       value={newOrder.unit_price} 
                       onChange={(e) => setNewOrder({...newOrder, unit_price: e.target.value})} 
+                      onFocus={(e) => e.target.select()}
+                      onClick={(e) => e.target.select()}
                     />
                     <Input 
                       label="Quantité" 
@@ -483,6 +594,8 @@ const OrdersList = () => {
                       required 
                       value={newOrder.quantity} 
                       onChange={(e) => setNewOrder({...newOrder, quantity: e.target.value})} 
+                      onFocus={(e) => e.target.select()}
+                      onClick={(e) => e.target.select()}
                     />
                   </div>
                 </div>

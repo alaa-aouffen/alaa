@@ -18,8 +18,9 @@ class CallLogController extends Controller
     public function store(Request $request, Order $order)
     {
         $validator = Validator::make($request->all(), [
-            'result' => 'required|in:answered,not_reachable,confirmed,cancelled,postponed,wrong_number',
-            'notes'  => 'nullable|string|max:1000',
+            'result'         => 'required|in:answered,not_reachable,confirmed,cancelled,postponed,wrong_number',
+            'notes'          => 'nullable|string|max:1000',
+            'postponed_date' => 'required_if:result,postponed|nullable|date',
         ]);
 
         if ($validator->fails()) {
@@ -44,11 +45,17 @@ class CallLogController extends Controller
             'postponed'     => 'postponed',
             'not_reachable' => 'not_reachable',
             'answered'      => 'in_progress',
-            'wrong_number'  => 'in_progress',
+            'wrong_number'  => 'cancelled',
         ];
 
         $order->increment('call_attempts');
-        $order->update(['status' => $statusMap[$request->result]]);
+        $updateData = ['status' => $statusMap[$request->result]];
+        if ($request->result === 'postponed') {
+            $updateData['postponed_date'] = $request->postponed_date;
+        } else {
+            $updateData['postponed_date'] = null;
+        }
+        $order->update($updateData);
 
         return response()->json([
             'call_log' => $log->load('agent:id,name'),

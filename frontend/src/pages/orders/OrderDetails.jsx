@@ -94,7 +94,9 @@ const ZRTimeline = ({ history, loading }) => {
 
   // Build a map: stepKey → array of history events
   const stepEvents = {};
-  history.forEach(event => {
+  const historyArray = Array.isArray(history) ? history : (history.history || []);
+  
+  historyArray.forEach(event => {
     const stateName = event.currentState?.stateName || event.stateName || '';
     const stepKey = mapStatusToStep(stateName);
     if (stepKey) {
@@ -205,11 +207,11 @@ const ZRTimeline = ({ history, loading }) => {
         </div>
 
         {/* Unmapped events (as a fallback list) */}
-        {history.some(e => !mapStatusToStep(e.currentState?.stateName || e.stateName || '')) && (
+        {historyArray.some(e => !mapStatusToStep(e.currentState?.stateName || e.stateName || '')) && (
           <div className="mt-6 border-t border-slate-100 pt-4 px-2">
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Événements supplémentaires</p>
             <div className="space-y-2">
-              {history
+              {historyArray
                 .filter(e => !mapStatusToStep(e.currentState?.stateName || e.stateName || ''))
                 .map((e, i) => (
                   <div key={i} className="flex items-start gap-2 text-xs">
@@ -242,6 +244,7 @@ const OrderDetails = () => {
   const [logLoading, setLogLoading] = useState(false);
   const [logResult, setLogResult] = useState('answered');
   const [logNotes, setLogNotes] = useState('');
+  const [postponedDate, setPostponedDate] = useState('');
   const [shippingLoading, setShippingLoading] = useState(false);
   const [shippingHistory, setShippingHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -252,6 +255,7 @@ const OrderDetails = () => {
   const [hubsLoading, setHubsLoading] = useState(false);
   const [deliveryFees, setDeliveryFees] = useState(null);
   const [feesLoading, setFeesLoading] = useState(false);
+  const [finalPrice, setFinalPrice] = useState('');
 
   const fetchOrder = async () => {
     try {
@@ -262,7 +266,10 @@ const OrderDetails = () => {
       }
     } catch (err) {
       console.error("Error fetching order", err);
-      navigate('/orders');
+      // Only redirect if the order truly doesn't exist (404)
+      if (err.response?.status === 404) {
+        navigate('/orders');
+      }
     } finally {
       setLoading(false);
     }
@@ -291,6 +298,9 @@ const OrderDetails = () => {
     }
     if (order && order.stopdesk_id) {
       setSelectedHubId(order.stopdesk_id);
+    }
+    if (order && order.total_price) {
+      setFinalPrice(order.total_price);
     }
   }, [order]);
 
@@ -325,7 +335,8 @@ const OrderDetails = () => {
     setHistoryLoading(true);
     try {
       const res = await api.get(`/orders/${id}/shipping-history`);
-      setShippingHistory(res.data);
+      // Backend returns { history: [...] }
+      setShippingHistory(res.data?.history || []);
     } catch (err) {
       console.error("Error fetching shipping history", err);
     } finally {
@@ -335,10 +346,19 @@ const OrderDetails = () => {
 
   const handleLogCall = async (e) => {
     e.preventDefault();
+    if (logResult === 'postponed' && !postponedDate) {
+      alert("Veuillez sélectionner une date de report.");
+      return;
+    }
     setLogLoading(true);
     try {
-      await api.post(`/orders/${id}/call-logs`, { result: logResult, notes: logNotes });
+      await api.post(`/orders/${id}/call-logs`, { 
+        result: logResult, 
+        notes: logNotes,
+        postponed_date: logResult === 'postponed' ? postponedDate : null
+      });
       setLogNotes('');
+      setPostponedDate('');
       fetchOrder();
     } catch (err) {
       alert("Erreur lors de l'enregistrement de l'appel");
@@ -357,7 +377,10 @@ const OrderDetails = () => {
 
     setShippingLoading(true);
     try {
-      const payload = { delivery_type: selectedDeliveryType };
+      const payload = { 
+        delivery_type: selectedDeliveryType,
+        final_price: finalPrice 
+      };
       if (selectedDeliveryType === 'pickup-point') {
           payload.stopdesk_id = selectedHubId;
       }
@@ -393,6 +416,22 @@ const OrderDetails = () => {
     <div className="animate-pulse space-y-4 pt-10 px-8">
       <div className="h-10 bg-slate-200 rounded w-1/4" />
       <div className="h-64 bg-slate-200 rounded" />
+    </div>
+  );
+
+  if (!order) return (
+    <div className="flex flex-col items-center justify-center py-24 gap-4 text-center">
+      <div className="text-5xl">⚠️</div>
+      <p className="text-lg font-bold text-slate-700">Commande introuvable ou erreur de chargement</p>
+      <p className="text-sm text-slate-400">La commande #{id} n&apos;a pas pu être chargée.</p>
+      <div className="flex gap-3 mt-2">
+        <button onClick={fetchOrder} className="px-5 py-2 bg-primary-600 text-white rounded-xl font-bold hover:bg-primary-700 transition">
+          Réessayer
+        </button>
+        <button onClick={() => navigate('/orders')} className="px-5 py-2 bg-slate-100 text-slate-700 rounded-xl font-bold hover:bg-slate-200 transition">
+          Retour aux commandes
+        </button>
+      </div>
     </div>
   );
 
@@ -500,7 +539,20 @@ const OrderDetails = () => {
         <div className="flex flex-wrap items-center gap-4 px-6 py-3">
           <div>
             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Statut de la commande</p>
-            <Badge status={order.status}>{order.status}</Badge>
+            <div className="flex items-center gap-2">
+              <Badge status={order.status}>{order.status}</Badge>
+              {order.status === 'postponed' && order.postponed_date && (
+                <span className={`text-xs font-black px-2.5 py-1 rounded-full ${
+                  new Date(order.postponed_date).toDateString() === new Date().toDateString() 
+                    ? 'bg-orange-100 text-orange-800 border border-orange-200 animate-pulse' 
+                    : 'bg-slate-100 text-slate-600 border border-slate-200'
+                }`}>
+                  {new Date(order.postponed_date).toDateString() === new Date().toDateString() 
+                    ? '⚠️ À traiter aujourd\'hui' 
+                    : `Reporté au ${new Date(order.postponed_date).toLocaleDateString()}`}
+                </span>
+              )}
+            </div>
           </div>
 
           <div>
@@ -738,6 +790,22 @@ const OrderDetails = () => {
                 </div>
               </div>
 
+              {logResult === 'postponed' && (
+                <div className="animate-in slide-in-from-top-2 duration-200">
+                  <label className="block text-xs font-bold text-orange-800 uppercase tracking-widest mb-2">
+                    Date de report *
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    min={new Date().toISOString().split('T')[0]}
+                    value={postponedDate}
+                    onChange={(e) => setPostponedDate(e.target.value)}
+                    className="w-full px-4 py-3 bg-white border border-orange-300 rounded-xl outline-none focus:ring-4 focus:ring-orange-500/20 focus:border-orange-500 transition-all text-slate-800 font-bold"
+                  />
+                </div>
+              )}
+
               <div>
                 <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">
                   Commentaires / Notes
@@ -758,7 +826,7 @@ const OrderDetails = () => {
           </Card>
 
           {/* Shipping Card */}
-          {(order.status === 'confirmed' || order.tracking_number) && (
+          {(order.status === 'confirmed' || order.status === 'shipped' || order.status === 'shipping' || order.tracking_number) && (
             <Card className={`border-t-4 ${order.tracking_number ? 'border-yellow-400' : 'border-emerald-500'}`}>
               <div className="flex items-center justify-between mb-5">
                 <div className="flex items-center gap-2 font-black text-lg text-slate-800 uppercase tracking-tighter">
@@ -834,6 +902,25 @@ const OrderDetails = () => {
                         )}
                     </div>
                   )}
+
+                  <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
+                    <label className="block text-xs font-bold text-yellow-800 uppercase tracking-widest mb-2">
+                        Montant à collecter (DZD) *
+                    </label>
+                    <input
+                        type="number"
+                        min="0"
+                        value={finalPrice}
+                        onChange={(e) => setFinalPrice(e.target.value)}
+                        onFocus={(e) => e.target.select()}
+                        onClick={(e) => e.target.select()}
+                        className="w-full px-4 py-3 bg-white border border-yellow-300 rounded-xl outline-none focus:ring-4 focus:ring-yellow-500/20 focus:border-yellow-500 transition-all text-slate-800 font-black text-lg"
+                        placeholder="Ex: 3000"
+                    />
+                    <p className="text-[10px] text-yellow-700 mt-2 italic">
+                        Ce montant sera envoyé à ZR Express comme prix final incluant la livraison.
+                    </p>
+                  </div>
 
                   <Button
                     className="w-full bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-100 h-14 rounded-2xl font-black text-base"

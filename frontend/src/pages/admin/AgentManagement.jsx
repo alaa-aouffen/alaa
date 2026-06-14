@@ -27,10 +27,10 @@ const AgentManagement = () => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    password: '',
-    zr_express_account_id: ''
+    name: '',
+    email: '',
+    password: ''
   });
-  const [zrAccounts, setZrAccounts] = useState([]);
   const [editingAgent, setEditingAgent] = useState(null);
   
   const [settings, setSettings] = useState({
@@ -40,13 +40,11 @@ const AgentManagement = () => {
 
   const fetchAgents = async () => {
     try {
-      const [agentRes, zrRes, settingsRes] = await Promise.all([
+      const [agentRes, settingsRes] = await Promise.all([
         api.get('/agents'),
-        api.get('/zr-express-accounts'),
         api.get('/settings')
       ]);
       setAgents(agentRes.data);
-      setZrAccounts(zrRes.data);
       setSettings(settingsRes.data);
     } catch (err) {
       console.error("Error fetching data", err);
@@ -85,7 +83,6 @@ const AgentManagement = () => {
     try {
       const payload = { ...formData };
       if (editingAgent && !payload.password) delete payload.password;
-      if (payload.zr_express_account_id === '') payload.zr_express_account_id = null;
 
       if (editingAgent) {
         await api.put(`/agents/${editingAgent.id}`, payload);
@@ -94,7 +91,7 @@ const AgentManagement = () => {
       }
       setShowAddModal(false);
       setEditingAgent(null);
-      setFormData({ name: '', email: '', password: '', zr_express_account_id: '' });
+      setFormData({ name: '', email: '', password: '' });
       fetchAgents();
     } catch (err) {
       alert(err.response?.data?.message || "Erreur lors de l'enregistrement");
@@ -108,8 +105,7 @@ const AgentManagement = () => {
     setFormData({
       name: agent.name,
       email: agent.email,
-      password: '', // On ne pré-remplit pas le mot de passe
-      zr_express_account_id: agent.zr_express_account_id || ''
+      password: '' // On ne pré-remplit pas le mot de passe
     });
     setShowAddModal(true);
   };
@@ -176,11 +172,6 @@ const AgentManagement = () => {
                               <p className="font-bold text-slate-800">{agent.name}</p>
                               <div className="flex items-center gap-2">
                                 <p className="text-xs text-slate-500 font-medium">{agent.email}</p>
-                                {agent.zr_express_account && (
-                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-indigo-50 text-indigo-600 border border-indigo-100 font-bold">
-                                    <Truck size={10} /> {agent.zr_express_account.name}
-                                  </span>
-                                )}
                               </div>
                             </div>
                           </div>
@@ -264,19 +255,6 @@ const AgentManagement = () => {
                     value={formData.password}
                     onChange={(e) => setFormData({...formData, password: e.target.value})}
                   />
-                  <div className="space-y-1">
-                    <label className="text-sm font-semibold text-slate-700 ml-1">Compte ZR Express (Optionnel)</label>
-                    <select
-                      value={formData.zr_express_account_id}
-                      onChange={(e) => setFormData({...formData, zr_express_account_id: e.target.value})}
-                      className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none transition-all font-medium text-slate-700"
-                    >
-                      <option value="">-- Aucun (Compte par défaut) --</option>
-                      {zrAccounts.map(account => (
-                        <option key={account.id} value={account.id}>{account.name}</option>
-                      ))}
-                    </select>
-                  </div>
                   <Button type="submit" loading={isSubmitting} className="w-full">
                     {editingAgent ? 'Sauvegarder les modifications' : 'Créer le compte'}
                   </Button>
@@ -307,6 +285,8 @@ const AgentManagement = () => {
                       max="30"
                       value={settings.order_processing_delay_days}
                       onChange={(e) => setSettings({...settings, order_processing_delay_days: e.target.value})}
+                      onFocus={(e) => e.target.select()}
+                      onClick={(e) => e.target.select()}
                       className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 outline-none transition-all font-bold text-slate-800"
                    />
                 </div>

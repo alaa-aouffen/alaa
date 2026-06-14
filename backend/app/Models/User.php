@@ -19,13 +19,8 @@ class User extends Authenticatable implements JWTSubject
         'password',
         'role',
         'is_active',
-        'zr_express_account_id',
     ];
 
-    public function zrExpressAccount()
-    {
-        return $this->belongsTo(ZrExpressAccount::class, 'zr_express_account_id');
-    }
 
     protected $hidden = [
         'password',

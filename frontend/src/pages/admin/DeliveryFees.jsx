@@ -115,6 +115,8 @@ const DeliveryFees = () => {
                         type="number"
                         value={editForm.home_fee}
                         onChange={(e) => setEditForm({ ...editForm, home_fee: parseInt(e.target.value) || 0 })}
+                        onFocus={(e) => e.target.select()}
+                        onClick={(e) => e.target.select()}
                         className="w-24 px-2 py-1 border border-primary-300 rounded text-center outline-none focus:ring-2 focus:ring-primary-500/20"
                         autoFocus
                       />
@@ -128,6 +130,8 @@ const DeliveryFees = () => {
                         type="number"
                         value={editForm.desk_fee}
                         onChange={(e) => setEditForm({ ...editForm, desk_fee: parseInt(e.target.value) || 0 })}
+                        onFocus={(e) => e.target.select()}
+                        onClick={(e) => e.target.select()}
                         className="w-24 px-2 py-1 border border-primary-300 rounded text-center outline-none focus:ring-2 focus:ring-primary-500/20"
                       />
                     ) : (

@@ -32,7 +32,6 @@ class UserController extends Controller
             'name'                  => 'required|string|max:255',
             'email'                 => 'required|email|unique:users,email',
             'password'              => 'required|string|min:6',
-            'zr_express_account_id' => 'nullable|exists:zr_express_accounts,id',
         ]);
 
         if ($validator->fails()) {
@@ -45,7 +44,6 @@ class UserController extends Controller
             'password'              => $request->password,
             'role'                  => 'agent',
             'is_active'             => true,
-            'zr_express_account_id' => $request->zr_express_account_id,
         ]);
 
         return response()->json($user, 201);
@@ -56,7 +54,7 @@ class UserController extends Controller
      */
     public function show(User $agent)
     {
-        $agent->load(['zrExpressAccount'])->loadCount(['assignedOrders', 'callLogs']);
+        $agent->loadCount(['assignedOrders', 'callLogs']);
         return response()->json($agent);
     }
 
@@ -70,14 +68,13 @@ class UserController extends Controller
             'email'                 => ['sometimes', 'email', Rule::unique('users')->ignore($agent->id)],
             'password'              => 'sometimes|string|min:6',
             'is_active'             => 'sometimes|boolean',
-            'zr_express_account_id' => 'nullable|exists:zr_express_accounts,id',
         ]);
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $data = $request->only(['name', 'email', 'is_active', 'zr_express_account_id']);
+        $data = $request->only(['name', 'email', 'is_active']);
         if ($request->filled('password')) {
             $data['password'] = $request->password;
         }
