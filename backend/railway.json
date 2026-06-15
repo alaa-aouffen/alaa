@@ -1,5 +1,10 @@
 {
   "$schema": "https://railway.com/railway.schema.json",
+  "build": {
+    "config": {
+      "phpExtensions": ["pdo_mysql", "mysqli"]
+    }
+  },
   "deploy": {
     "startCommand": "php artisan serve --host=0.0.0.0 --port=$PORT",
     "preDeployCommand": "php artisan migrate --force"
