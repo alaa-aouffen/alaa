@@ -503,5 +503,49 @@ class ZRExpressService
 
         return [];
     }
-}
 
+    /**
+     * Search territories directly from ZR Express API.
+     * Useful for populating dropdowns in the frontend.
+     *
+     * @param string|null $keyword
+     * @param string|null $parentId
+     * @param string|null $level 'wilaya' or 'commune'
+     * @return array
+     */
+    public function searchTerritories($keyword = null, $parentId = null, $level = null)
+    {
+        $payload = [
+            'page' => 1,
+            'pageSize' => 2000 // Get all
+        ];
+
+        if ($keyword) {
+            $payload['keyword'] = $keyword;
+        }
+
+        if ($parentId) {
+            $payload['parentId'] = $parentId;
+        }
+
+        if ($level) {
+            $payload['level'] = $level;
+        }
+
+        try {
+            $response = Http::withoutVerifying()
+                ->withHeaders($this->headers())
+                ->post("{$this->baseUrl}/api/v1/territories/search", $payload);
+
+            if ($response->successful()) {
+                return $response->json()['items'] ?? [];
+            }
+
+            Log::error('ZR Express API Error: Failed to search territories', ['status' => $response->status(), 'body' => $response->body()]);
+            return [];
+        } catch (\Exception $e) {
+            Log::error('ZR Express API Exception: ' . $e->getMessage());
+            return [];
+        }
+    }
+}

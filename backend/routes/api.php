@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\CallLogController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\SettingsController;
+use App\Http\Controllers\Api\TerritoryController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\ZrExpressAccountController;
 use App\Http\Controllers\CategoryController;
@@ -62,6 +63,9 @@ Route::prefix('v1')->group(function () {
 
         // Dashboard (role-aware)
         Route::get('dashboard', [DashboardController::class, 'index']);
+
+        // Territories (ZR Express)
+        Route::get('territories', [TerritoryController::class, 'index']);
 
         // Orders — admins can do everything, agents can read and update
         Route::get('orders', [OrderController::class, 'index']);
