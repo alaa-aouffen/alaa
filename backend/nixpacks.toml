@@ -1,7 +1,0 @@
-providers = ["php"]
-
-[variables]
-    PHP_VERSION = "8.2"
-
-[phases.install]
-    cmds = ["composer install --no-dev --optimize-autoloader"]
