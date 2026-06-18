@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../../api/axios';
 import { useAuth } from '../../context/AuthContext';
 import { Card, Badge, Input, Button } from '../../components/ui';
+import TerritorySelect from '../../components/TerritorySelect';
 import { 
   Search, 
   Filter, 
@@ -538,26 +539,12 @@ const OrdersList = () => {
                       onChange={(e) => setNewOrder({...newOrder, customer_phone: e.target.value})} 
                     />
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-semibold text-slate-700 mb-1.5 ml-1">Wilaya</label>
-                      <select
-                        required
-                        value={newOrder.wilaya}
-                        onChange={(e) => setNewOrder({...newOrder, wilaya: e.target.value})}
-                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all text-slate-800"
-                      >
-                        {['Alger', 'Oran', 'Constantine', 'Annaba', 'Blida', 'Tizi Ouzou', 'Sétif', 'Béjaïa', 'Tlemcen', 'Batna'].map(w => (
-                          <option key={w} value={w}>{w}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <Input 
-                      label="Commune" 
-                      value={newOrder.commune} 
-                      onChange={(e) => setNewOrder({...newOrder, commune: e.target.value})} 
-                    />
-                  </div>
+                  <TerritorySelect
+                    wilaya={newOrder.wilaya}
+                    setWilaya={(val) => setNewOrder({...newOrder, wilaya: val})}
+                    commune={newOrder.commune}
+                    setCommune={(val) => setNewOrder({...newOrder, commune: val})}
+                  />
                   <Input 
                     label="Adresse complète" 
                     value={newOrder.address} 

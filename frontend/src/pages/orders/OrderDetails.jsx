@@ -21,8 +21,10 @@ import {
   Home,
   Building2,
   Check,
-  Navigation
+  Navigation,
+  Edit
 } from 'lucide-react';
+import TerritorySelect from '../../components/TerritorySelect';
 
 // ─── ZR Express Status Timeline Config ─────────────────────────────────────
 // Maps ZR Express stateName values to display order in the timeline
@@ -256,6 +258,11 @@ const OrderDetails = () => {
   const [deliveryFees, setDeliveryFees] = useState(null);
   const [feesLoading, setFeesLoading] = useState(false);
   const [finalPrice, setFinalPrice] = useState('');
+  
+  const [showEditAddressModal, setShowEditAddressModal] = useState(false);
+  const [editWilaya, setEditWilaya] = useState('');
+  const [editCommune, setEditCommune] = useState('');
+  const [editAddress, setEditAddress] = useState('');
 
   const fetchOrder = async () => {
     try {
@@ -301,6 +308,11 @@ const OrderDetails = () => {
     }
     if (order && order.total_price) {
       setFinalPrice(order.total_price);
+    }
+    if (order) {
+      setEditWilaya(order.wilaya || '');
+      setEditCommune(order.commune || '');
+      setEditAddress(order.address || '');
     }
   }, [order]);
 
@@ -410,6 +422,24 @@ const OrderDetails = () => {
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
     alert("Copié dans le presse-papier !");
+  };
+
+  const handleSaveAddress = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await api.put(`/orders/${id}`, {
+        wilaya: editWilaya,
+        commune: editCommune,
+        address: editAddress
+      });
+      setShowEditAddressModal(false);
+      fetchOrder();
+    } catch (err) {
+      console.error(err);
+      alert("Erreur lors de la mise à jour de l'adresse");
+      setLoading(false);
+    }
   };
 
   if (loading) return (
@@ -651,9 +681,20 @@ const OrderDetails = () => {
                     </p>
                   </div>
                   <div className="pt-2">
-                    <p className="text-sm font-bold text-slate-500 mb-1 flex items-center gap-2">
-                      <MapPin size={16} />
-                      Adresse de livraison
+                    <p className="text-sm font-bold text-slate-500 mb-1 flex items-center justify-between">
+                      <span className="flex items-center gap-2">
+                        <MapPin size={16} />
+                        Adresse de livraison
+                      </span>
+                      {order.status !== 'shipped' && order.status !== 'delivered' && order.status !== 'returned' && (
+                        <button
+                          onClick={() => setShowEditAddressModal(true)}
+                          className="text-primary-600 hover:text-primary-700 bg-primary-50 px-2 py-1 rounded-md text-[10px] uppercase font-bold flex items-center gap-1 transition-colors"
+                        >
+                          <Edit size={12} />
+                          Modifier
+                        </button>
+                      )}
                     </p>
                     <p className="text-slate-800 font-semibold">{order.wilaya}, {order.commune}</p>
                     <p className="text-slate-600 text-sm mt-1">{order.address}</p>
@@ -994,6 +1035,63 @@ const OrderDetails = () => {
           </Card>
         </div>
       </div>
+
+      {/* Edit Address Modal */}
+      {showEditAddressModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col">
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="font-bold text-xl text-slate-800 flex items-center gap-2">
+                <MapPin size={24} className="text-primary-600" />
+                Modifier l'adresse
+              </h3>
+              <button onClick={() => setShowEditAddressModal(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
+                <XSquare size={24} />
+              </button>
+            </div>
+            
+            <div className="p-6">
+              <form onSubmit={handleSaveAddress} className="space-y-6">
+                <TerritorySelect
+                  wilaya={editWilaya}
+                  setWilaya={setEditWilaya}
+                  commune={editCommune}
+                  setCommune={setEditCommune}
+                />
+
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1.5 ml-1">Adresse détaillée</label>
+                  <input
+                    type="text"
+                    value={editAddress}
+                    onChange={(e) => setEditAddress(e.target.value)}
+                    placeholder="Quartier, rue, bâtiment..."
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all text-slate-800"
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-4 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setShowEditAddressModal(false)}
+                    className="flex-1 py-3 text-sm font-bold text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-3 text-sm font-bold text-white bg-primary-600 rounded-xl hover:bg-primary-700 transition-colors"
+                  >
+                    Enregistrer
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Action footer for shipping */}
     </div>
   );
 };
