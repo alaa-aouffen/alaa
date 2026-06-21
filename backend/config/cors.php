@@ -26,11 +26,13 @@ return [
         'https://ecom-pro-one.vercel.app',
         'https://*.vercel.app',
         'https://lambent-tiramisu-96149e.netlify.app',
+        'https://ecom-pro-callcenter.netlify.app',
         'https://*.netlify.app',
     ],
 
     'allowed_origins_patterns' => [
         '#^https://.*\\.vercel\\.app$#',
+        '#^https://.*\\.netlify\\.app$#',
         '#^http://localhost(:[0-9]+)?$#',  // Autorise tous les ports localhost (Flutter web)
     ],
 
