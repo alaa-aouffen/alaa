@@ -25,6 +25,8 @@ return [
         'http://localhost',
         'https://ecom-pro-one.vercel.app',
         'https://*.vercel.app',
+        'https://lambent-tiramisu-96149e.netlify.app',
+        'https://*.netlify.app',
     ],
 
     'allowed_origins_patterns' => [
