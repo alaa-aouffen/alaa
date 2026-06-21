@@ -515,37 +515,93 @@ class ZRExpressService
      */
     public function searchTerritories($keyword = null, $parentId = null, $level = null)
     {
-        $payload = [
-            'page' => 1,
-            'pageSize' => 2000 // Get all
-        ];
+        // We will collect territories from ALL accounts and merge them
+        $accountsToTry = [];
 
-        if ($keyword) {
-            $payload['keyword'] = $keyword;
+        // 1. Default configured account
+        $accountsToTry[] = ['token' => $this->token, 'tenantId' => $this->tenantId];
+
+        // 2. All active sub-accounts from the DB
+        if (class_exists(\App\Models\ZrExpressAccount::class)) {
+            $dbAccounts = \App\Models\ZrExpressAccount::where('is_active', true)->get();
+            foreach ($dbAccounts as $acc) {
+                $accountsToTry[] = ['token' => $acc->token, 'tenantId' => $acc->tenant_id];
+            }
         }
 
-        if ($parentId) {
-            $payload['parentId'] = $parentId;
-        }
+        // Collect all unique items across all accounts (de-dup by UUID)
+        $allItemsById = [];
 
-        if ($level) {
-            $payload['level'] = $level;
-        }
-
-        try {
-            $response = Http::withoutVerifying()
-                ->withHeaders($this->headers())
-                ->post("{$this->baseUrl}/api/v1/territories/search", $payload);
-
-            if ($response->successful()) {
-                return $response->json()['items'] ?? [];
+        foreach ($accountsToTry as $acc) {
+            if (empty($acc['token']) || empty($acc['tenantId'])) {
+                continue;
             }
 
-            Log::error('ZR Express API Error: Failed to search territories', ['status' => $response->status(), 'body' => $response->body()]);
-            return [];
-        } catch (\Exception $e) {
-            Log::error('ZR Express API Exception: ' . $e->getMessage());
-            return [];
+            try {
+                $page = 1;
+
+                while (true) {
+                    $payload = [
+                        'page'     => $page,
+                        'pageSize' => 1000, // Use 1000 per page (safer than 2000)
+                    ];
+
+                    if ($keyword)  $payload['keyword']  = $keyword;
+                    if ($parentId) $payload['parentId'] = $parentId;
+                    if ($level)    $payload['level']    = $level;
+
+                    $response = Http::withoutVerifying()
+                        ->withHeaders([
+                            'X-Api-Key' => $acc['token'],
+                            'X-Tenant'  => $acc['tenantId'],
+                            'Accept'    => 'application/json',
+                        ])
+                        ->timeout(30)
+                        ->post("{$this->baseUrl}/api/v1/territories/search", $payload);
+
+                    if (!$response->successful()) {
+                        break; // This account failed, try next
+                    }
+
+                    $rawItems = $response->json()['items'] ?? [];
+
+                    if (empty($rawItems)) {
+                        break; // No more pages for this account
+                    }
+
+                    foreach ($rawItems as $item) {
+                        // Apply level filter strictly
+                        if ($level && ($item['level'] ?? '') !== $level) {
+                            continue;
+                        }
+                        // De-duplicate by UUID across all accounts
+                        if (!empty($item['id']) && !isset($allItemsById[$item['id']])) {
+                            $allItemsById[$item['id']] = $item;
+                        }
+                    }
+
+                    // If the API returns 0 items, we've reached the end
+                    if (count($rawItems) == 0) {
+                        break;
+                    }
+
+                    $page++;
+
+                    // Failsafe: max 20 pages per account
+                    if ($page > 20) {
+                        break;
+                    }
+                }
+            } catch (\Exception $e) {
+                Log::warning('ZR Express: Territory search error for one account: ' . $e->getMessage());
+                continue;
+            }
         }
+
+        if (empty($allItemsById)) {
+            Log::error('ZR Express API Error: Failed to search territories with all available tokens.');
+        }
+
+        return array_values($allItemsById);
     }
 }

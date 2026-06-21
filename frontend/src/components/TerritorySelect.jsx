@@ -1,96 +1,78 @@
-import React, { useState, useEffect } from 'react';
-import api from '../api/axios';
+import React, { useState, useEffect, useMemo } from 'react';
+import territoriesData from '../data/algeria_territories.json';
 
+/**
+ * TerritorySelect
+ * 
+ * Uses a locally-bundled JSON built from the ZR Express API, ensuring that:
+ * - Wilaya names exactly match ZR Express spelling
+ * - Commune names exactly match ZR Express spelling
+ * - No network calls are needed → instant loading
+ * 
+ * Props:
+ *   wilaya       {string}   - selected wilaya name (ZR exact spelling)
+ *   setWilaya    {function} - setter for wilaya
+ *   commune      {string}   - selected commune name
+ *   setCommune   {function} - setter for commune
+ */
 const TerritorySelect = ({ wilaya, setWilaya, commune, setCommune }) => {
-  const [wilayas, setWilayas] = useState([]);
-  const [communes, setCommunes] = useState([]);
-  const [loadingWilayas, setLoadingWilayas] = useState(false);
-  const [loadingCommunes, setLoadingCommunes] = useState(false);
+  // Static data — never changes after mount
+  const wilayas = useMemo(() => territoriesData, []);
 
-  // Fetch Wilayas on mount
-  useEffect(() => {
-    const fetchWilayas = async () => {
-      setLoadingWilayas(true);
-      try {
-        const res = await api.get('/territories');
-        // Sort alphabetically
-        const sorted = (res.data || []).sort((a, b) => a.name.localeCompare(b.name));
-        setWilayas(sorted);
-      } catch (err) {
-        console.error("Erreur chargement wilayas", err);
-      } finally {
-        setLoadingWilayas(false);
-      }
-    };
-    fetchWilayas();
-  }, []);
-
-  // Fetch Communes when Wilaya changes
-  useEffect(() => {
-    if (!wilaya || wilayas.length === 0) {
-      setCommunes([]);
-      return;
-    }
-
-    // Find the Wilaya ID
-    const selectedWilayaObj = wilayas.find(w => w.name === wilaya);
-    if (!selectedWilayaObj) {
-      setCommunes([]);
-      return;
-    }
-
-    const fetchCommunes = async () => {
-      setLoadingCommunes(true);
-      try {
-        const res = await api.get(`/territories?parentId=${selectedWilayaObj.id}`);
-        const sorted = (res.data || []).sort((a, b) => a.name.localeCompare(b.name));
-        setCommunes(sorted);
-      } catch (err) {
-        console.error("Erreur chargement communes", err);
-      } finally {
-        setLoadingCommunes(false);
-      }
-    };
-
-    fetchCommunes();
+  // Communes for the currently selected wilaya
+  const communes = useMemo(() => {
+    if (!wilaya) return [];
+    const found = wilayas.find(w => w.name === wilaya);
+    return found ? found.communes : [];
   }, [wilaya, wilayas]);
+
+  // When wilaya changes, reset commune only if current commune is not in the new list
+  useEffect(() => {
+    if (commune && communes.length > 0 && !communes.includes(commune)) {
+      setCommune('');
+    }
+  }, [wilaya]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* ── Wilaya ── */}
       <div>
         <label className="block text-sm font-semibold text-slate-700 mb-1.5 ml-1">
-          Wilaya {loadingWilayas && <span className="text-xs text-slate-400 italic font-normal">(Chargement...)</span>}
+          Wilaya
         </label>
         <select
           required
           value={wilaya}
           onChange={(e) => {
             setWilaya(e.target.value);
-            setCommune(''); // Reset commune when wilaya changes
+            setCommune('');
           }}
-          className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all text-slate-800 disabled:opacity-50"
-          disabled={loadingWilayas}
+          className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all text-slate-800"
         >
           <option value="">Sélectionnez une Wilaya</option>
           {wilayas.map(w => (
-            <option key={w.id} value={w.name}>{w.name}</option>
+            <option key={w.id} value={w.name}>
+              {w.id} - {w.name}
+            </option>
           ))}
         </select>
       </div>
+
+      {/* ── Commune ── */}
       <div>
         <label className="block text-sm font-semibold text-slate-700 mb-1.5 ml-1">
-          Commune {loadingCommunes && <span className="text-xs text-slate-400 italic font-normal">(Chargement...)</span>}
+          Commune
         </label>
         {communes.length > 0 ? (
           <select
+            required
             value={commune}
             onChange={(e) => setCommune(e.target.value)}
-            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all text-slate-800 disabled:opacity-50"
-            disabled={loadingCommunes}
+            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all text-slate-800"
           >
             <option value="">Sélectionnez une Commune</option>
-            {communes.map(c => (
-              <option key={c.id} value={c.name}>{c.name}</option>
+            {communes.map(cName => (
+              <option key={cName} value={cName}>{cName}</option>
             ))}
           </select>
         ) : (
@@ -98,9 +80,9 @@ const TerritorySelect = ({ wilaya, setWilaya, commune, setCommune }) => {
             type="text"
             value={commune}
             onChange={(e) => setCommune(e.target.value)}
-            placeholder={wilaya ? "Entrez la commune" : "Sélectionnez d'abord une wilaya"}
-            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all text-slate-800"
-            disabled={!wilaya && wilayas.length > 0}
+            placeholder={wilaya ? 'Entrez la commune manuellement' : "Sélectionnez d'abord une wilaya"}
+            disabled={!wilaya}
+            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all text-slate-800 disabled:opacity-40 disabled:cursor-not-allowed"
           />
         )}
       </div>

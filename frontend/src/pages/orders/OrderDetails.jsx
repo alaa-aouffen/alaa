@@ -686,7 +686,7 @@ const OrderDetails = () => {
                         <MapPin size={16} />
                         Adresse de livraison
                       </span>
-                      {order.status !== 'shipped' && order.status !== 'delivered' && order.status !== 'returned' && (
+                      {order.status !== 'delivered' && order.status !== 'returned' && (
                         <button
                           onClick={() => setShowEditAddressModal(true)}
                           className="text-primary-600 hover:text-primary-700 bg-primary-50 px-2 py-1 rounded-md text-[10px] uppercase font-bold flex items-center gap-1 transition-colors"
