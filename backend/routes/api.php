@@ -30,22 +30,28 @@ Route::prefix('v1')->group(function () {
     // ─── DB debug (temporary) ─────────────────────────────────────────
     Route::get('db-debug', function () {
         try {
+            $start = microtime(true);
             \DB::connection()->getPdo();
+            $pdoTime = microtime(true) - $start;
+            
+            $start = microtime(true);
             $tables = \DB::select('SHOW TABLES');
+            $queryTime = microtime(true) - $start;
+            
             return response()->json([
                 'status' => 'connected',
                 'host' => env('DB_HOST') ?: env('MYSQLHOST') ?: 'N/A',
                 'database' => env('DB_DATABASE') ?: env('MYSQLDATABASE') ?: 'N/A',
                 'tables_count' => count($tables),
                 'DATABASE_URL_set' => !empty(env('DATABASE_URL')),
+                'latency_pdo_connect_ms' => round($pdoTime * 1000, 2),
+                'latency_simple_query_ms' => round($queryTime * 1000, 2),
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
                 'message' => $e->getMessage(),
                 'host' => env('DB_HOST') ?: env('MYSQLHOST') ?: 'N/A',
-                'database' => env('DB_DATABASE') ?: env('MYSQLDATABASE') ?: 'N/A',
-                'DATABASE_URL_set' => !empty(env('DATABASE_URL')),
             ], 500);
         }
     });
