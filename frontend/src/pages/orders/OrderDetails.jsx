@@ -263,6 +263,7 @@ const OrderDetails = () => {
   const [editWilaya, setEditWilaya] = useState('');
   const [editCommune, setEditCommune] = useState('');
   const [editAddress, setEditAddress] = useState('');
+  const [isAddressSaving, setIsAddressSaving] = useState(false);
 
   const fetchOrder = async () => {
     try {
@@ -426,7 +427,8 @@ const OrderDetails = () => {
 
   const handleSaveAddress = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    if (isAddressSaving) return;
+    setIsAddressSaving(true);
     try {
       await api.put(`/orders/${id}`, {
         wilaya: editWilaya,
@@ -438,7 +440,8 @@ const OrderDetails = () => {
     } catch (err) {
       console.error(err);
       alert("Erreur lors de la mise à jour de l'adresse");
-      setLoading(false);
+    } finally {
+      setIsAddressSaving(false);
     }
   };
 
@@ -1080,9 +1083,10 @@ const OrderDetails = () => {
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 py-3 text-sm font-bold text-white bg-primary-600 rounded-xl hover:bg-primary-700 transition-colors"
+                    disabled={isAddressSaving}
+                    className="flex-1 py-3 text-sm font-bold text-white bg-primary-600 rounded-xl hover:bg-primary-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    Enregistrer
+                    {isAddressSaving ? 'Enregistrement...' : 'Enregistrer'}
                   </button>
                 </div>
               </form>

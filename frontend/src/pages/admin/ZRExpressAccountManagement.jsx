@@ -5,6 +5,7 @@ import { Plus, Edit2, Trash2, Truck, Save, X, Settings, ShieldCheck } from 'luci
 const ZRExpressAccountManagement = () => {
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [showForm, setShowForm] = useState(false);
   
   const [formData, setFormData] = useState({
@@ -33,6 +34,8 @@ const ZRExpressAccountManagement = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     try {
       if (editingId) {
         await api.put(`/zr-express-accounts/${editingId}`, formData);
@@ -46,6 +49,8 @@ const ZRExpressAccountManagement = () => {
     } catch (err) {
       console.error('Action failed', err);
       alert('Erreur lors de la sauvegarde.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -165,10 +170,11 @@ const ZRExpressAccountManagement = () => {
               </button>
               <button
                 type="submit"
-                className="flex items-center gap-2 px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium shadow-sm transition"
+                disabled={isSubmitting}
+                className="flex items-center gap-2 px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium shadow-sm transition disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                <Save size={18} />
-                Sauvegarder
+                <Save size={isSubmitting ? 0 : 18} />
+                {isSubmitting ? 'Enregistrement...' : 'Sauvegarder'}
               </button>
             </div>
           </form>
