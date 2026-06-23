@@ -28,11 +28,14 @@ return [
         'https://lambent-tiramisu-96149e.netlify.app',
         'https://ecom-pro-callcenter.netlify.app',
         'https://*.netlify.app',
+        'https://alaa-production.up.railway.app',
+        'https://*.railway.app',
     ],
 
     'allowed_origins_patterns' => [
         '#^https://.*\\.vercel\\.app$#',
         '#^https://.*\\.netlify\\.app$#',
+        '#^https://.*\\.railway\\.app$#',
         '#^http://localhost(:[0-9]+)?$#',  // Autorise tous les ports localhost (Flutter web)
     ],
 
