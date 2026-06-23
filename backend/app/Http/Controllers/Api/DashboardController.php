@@ -16,11 +16,16 @@ class DashboardController extends Controller
         /** @var User $user */
         $user = Auth::guard('api')->user();
 
-        if ($user->isAdmin()) {
-            return $this->adminStats();
-        }
+        // Generate a cache key based on the user ID and all request parameters
+        $cacheKey = 'dashboard_stats_user_' . $user->id . '_' . md5(json_encode(request()->all()));
 
-        return $this->agentStats($user);
+        // Cache the dashboard for 60 seconds (1 minute) to avoid high DB latency
+        return \Illuminate\Support\Facades\Cache::remember($cacheKey, 60, function () use ($user) {
+            if ($user->isAdmin()) {
+                return $this->adminStats();
+            }
+            return $this->agentStats($user);
+        });
     }
 
     private function adminStats()
